@@ -230,6 +230,13 @@ with tab2:
     )
     fig_age.update_layout(legend_title_text="Outcome (1=Died)")
     st.plotly_chart(fig_age, use_container_width=True)
+    st.markdown(
+        "*Fatalities (red) are heavily concentrated in the 70–85 age range, while "
+        "non-fatal reports (blue) are spread more evenly across middle age — confirming "
+        "age as the dominant demographic risk factor. Reporters under 40 make up the "
+        "largest share of total reports but contribute very few deaths. This skew "
+        "motivates age as the top feature in every model trained.*"
+    )
 
     col_a, col_b = st.columns(2)
 
@@ -250,6 +257,14 @@ with tab2:
         )
         fig_sex.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
         st.plotly_chart(fig_sex, use_container_width=True)
+        st.markdown(
+            "*Male reporters show a notably higher fatality rate than female reporters, "
+            "consistent with established COVID-19 epidemiology where male sex is an "
+            "independent risk factor for severe outcomes. This may reflect hormonal "
+            "differences in immune response and higher rates of relevant comorbidities "
+            "in men. The 'Unknown' sex category carries an inflated rate due to "
+            "under-reported records that skew toward unresolved severe cases.*"
+        )
 
     # ── Death rate by manufacturer ────────────────────────────
     with col_b:
@@ -268,6 +283,14 @@ with tab2:
         )
         fig_manu.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
         st.plotly_chart(fig_manu, use_container_width=True)
+        st.markdown(
+            "*Janssen (J&J) shows the highest reported fatality rate, likely reflecting "
+            "its early rollout to older and harder-to-reach populations rather than an "
+            "intrinsic product effect. Pfizer and Moderna, administered in far larger "
+            "volumes across a broader demographic mix, show lower raw fatality rates. "
+            "These differences should be interpreted cautiously — reporting demographics "
+            "and rollout timing confound direct manufacturer comparisons.*"
+        )
 
     # ── Top-15 symptoms ───────────────────────────────────────
     st.subheader("Top-15 Reported Symptoms")
@@ -292,6 +315,15 @@ with tab2:
         )
         fig_sym.update_layout(yaxis={"categoryorder": "total ascending"})
         st.plotly_chart(fig_sym, use_container_width=True)
+        st.markdown(
+            "*Dyspnoea (shortness of breath), pyrexia (fever), and fatigue dominate "
+            "both the overall report population and the death subset, identifying them "
+            "as key signals of vaccine-related adverse events. Death-specific counts "
+            "skew toward cardiovascular and respiratory symptoms — such as chest pain "
+            "and dyspnoea — relative to the general reporting population. The ratio of "
+            "death counts to all-report counts for each symptom can serve as a rough "
+            "proxy for symptom-level lethality risk.*"
+        )
 
     # ── Correlation heatmap ───────────────────────────────────
     st.subheader("Correlation Heatmap (Numeric & Binary Features)")
@@ -310,6 +342,15 @@ with tab2:
     ax.set_title("Pearson Correlation Matrix", pad=12)
     st.pyplot(fig_heat, use_container_width=True)
     plt.close(fig_heat)
+    st.markdown(
+        "*Age (`AGE_YRS`) shows the strongest positive correlation with `DIED`, "
+        "confirming it as the most predictive demographic variable in the dataset. "
+        "`HOSPITAL` and `L_THREAT` correlate positively with mortality, as expected — "
+        "severe cases requiring hospitalisation or posing life-threatening risk more "
+        "often result in death. `RECOVD` shows a strong negative correlation with "
+        "`DIED`, which is mechanistically sound: patients who fully recovered did not "
+        "die, making these two outcomes mutually exclusive in most records.*"
+    )
 
     col_c, col_d = st.columns(2)
 
@@ -332,6 +373,15 @@ with tab2:
             )
             fig_dose.update_traces(texttemplate="%{text:.2f}%", textposition="outside")
             st.plotly_chart(fig_dose, use_container_width=True)
+            st.markdown(
+                "*First-dose fatality rates are elevated because early rollout "
+                "prioritised nursing home residents and severely immunocompromised "
+                "individuals — the highest-risk populations. Later doses (3rd, 4th) "
+                "show lower fatality rates, consistent with a healthier booster-seeking "
+                "population and broader immunity at the time of administration. This "
+                "dose-series pattern reflects vaccination campaign prioritisation "
+                "strategies rather than a causal protective effect of additional doses.*"
+            )
 
     # ── Onset lag boxplot ─────────────────────────────────────
     with col_d:
@@ -346,6 +396,14 @@ with tab2:
         )
         fig_box.update_layout(yaxis_range=[0, 120])
         st.plotly_chart(fig_box, use_container_width=True)
+        st.markdown(
+            "*Deceased patients tend to have shorter onset-to-report lag times than "
+            "survivors, suggesting fatal adverse events are identified and filed rapidly "
+            "by healthcare providers. Longer lags among survivors likely reflect milder "
+            "events noticed and self-reported retrospectively. This pattern underscores "
+            "the importance of early post-vaccination monitoring windows in capturing "
+            "the highest-severity events.*"
+        )
 
     # ── Reports over time ─────────────────────────────────────
     if "RECV_YEAR_MONTH" in df.columns:
@@ -367,6 +425,16 @@ with tab2:
         )
         fig_ts.update_xaxes(tickangle=45)
         st.plotly_chart(fig_ts, use_container_width=True)
+        st.markdown(
+            "*Report volume surged sharply in early 2021 during the initial rollout, "
+            "peaked mid-2021 as vaccination rates reached maximum uptake, then declined "
+            "steadily through 2022–2024 as campaign momentum slowed. Death reports "
+            "follow the overall volume trend, remaining a consistently small fraction "
+            "throughout — indicating the absolute fatality count was highest during the "
+            "peak reporting period. The gradual decline in both series after 2021 "
+            "reflects reduced booster uptake and improved safety signal processing "
+            "reducing duplicate or late filings.*"
+        )
 
     # ── Choropleth map ────────────────────────────────────────
     st.subheader("Fatality Rate by US State")
@@ -387,6 +455,16 @@ with tab2:
     )
     fig_map.update_layout(geo=dict(showlakes=True, lakecolor="rgb(255,255,255)"))
     st.plotly_chart(fig_map, use_container_width=True)
+    st.markdown(
+        "*South Dakota and Kentucky show the highest state-level fatality rates, "
+        "likely driven by older rural populations, limited healthcare access, and "
+        "early rollout demographics rather than state-specific vaccine risks. "
+        "Plains and southeastern states cluster toward higher rates, consistent with "
+        "regions that have larger elderly rural populations and fewer healthcare "
+        "facilities per capita. Western and northeastern states generally show lower "
+        "rates, reflecting earlier broader uptake across younger and more urban "
+        "populations with better access to follow-up care.*"
+    )
 
     # ── Age boxplot by hospitalization ───────────────────────
     st.subheader("Age Distribution by Clinical Outcome")
@@ -411,6 +489,16 @@ with tab2:
     )
     fig_age_box.update_layout(showlegend=False, xaxis_tickangle=30)
     st.plotly_chart(fig_age_box, use_container_width=True)
+    st.markdown(
+        "*Across every clinical outcome category, patients who experienced the adverse "
+        "outcome (=1) are consistently older than those who did not, reinforcing age as "
+        "a universal risk amplifier for vaccine-related adverse events of all severities. "
+        "The median age of deceased patients is markedly higher than for the "
+        "hospitalised or ER-visit groups, indicating that age compounds risk at every "
+        "step of the severity ladder. The tight interquartile range for the Died=1 "
+        "group suggests most fatalities are concentrated in a narrow older age band "
+        "rather than distributed across all ages.*"
+    )
 
 # ═══════════════════════════════════════════════════════════════
 # TAB 3 — MODEL REPORTS
