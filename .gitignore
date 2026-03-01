@@ -1,0 +1,27 @@
+# Raw VAERS data (too large for GitHub)
+*.csv
+
+# Screenshots and report
+*.png
+*.pdf
+
+# Playwright / selenium capture scripts (not needed for deployment)
+pw_*.py
+scroll_cap.py
+selenium_cap.py
+make_report.py
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
