@@ -885,6 +885,36 @@ with tab4:
         st.pyplot(fig_bee, use_container_width=True)
         plt.close(fig_bee)
 
+    st.markdown("""
+**Which features have the strongest impact on predictions?**
+`AGE_YRS` dominates all other features by a wide margin — its mean |SHAP| value is
+roughly 3–5× larger than the next-ranked feature. `RECOVD` (recovery status),
+`HOSPITAL` (hospitalisation flag), and `L_THREAT` (life-threatening event) form the
+next tier of importance. Among symptom flags, `SYM_Dyspnoea` and `SYM_Pyrexia` rank
+highest, reflecting their clinical association with severe COVID-19 outcomes.
+
+**How do those features influence predictions (positively or negatively)?**
+High `AGE_YRS` values (older patients) push strongly toward predicting death — the
+beeswarm plot shows a clear red-right pattern for this feature. `RECOVD = 1` (patient
+recovered) produces large negative SHAP values, pushing firmly toward survival; this
+makes physiological sense since recovery and death are mutually exclusive outcomes.
+`HOSPITAL = 1` and `L_THREAT = 1` add positive SHAP contributions (toward death),
+as they indicate severe enough illness to require acute care. Manufacturers and dose
+series contribute smaller, mixed-direction effects that reflect demographic confounding
+rather than direct causal relationships.
+
+**How could these insights be useful to a decision-maker?**
+Public-health officials and clinicians can use these findings to prioritise
+post-vaccination monitoring resources toward the highest-risk subgroup: **elderly
+patients who were hospitalised and have not yet recovered**. The model's transparency
+via SHAP means a triage nurse or pharmacovigilance analyst can audit any individual
+prediction to understand exactly which factors drove the risk score, supporting
+explainable AI requirements in regulated healthcare settings. The interactive
+prediction widget in Section B allows non-technical stakeholders to explore
+"what-if" scenarios (e.g., "how much does adding a life-threatening flag change
+the risk?") without touching the underlying code.
+""")
+
     # ── A2. Mean |SHAP| bar ───────────────────────────────────
     st.subheader("A2 — Mean |SHAP| Feature Importance (Top 20)")
     mean_abs = np.abs(shap_vals).mean(axis=0)
