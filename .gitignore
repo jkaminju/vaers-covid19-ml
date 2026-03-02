@@ -9,7 +9,6 @@
 pw_*.py
 scroll_cap.py
 selenium_cap.py
-make_report.py
 
 # Python cache
 __pycache__/
