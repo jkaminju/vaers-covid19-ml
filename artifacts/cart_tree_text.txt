@@ -1,0 +1,87 @@
+Best CART — params: {'max_depth': 10, 'min_samples_leaf': 10}
+
+|--- AGE_YRS <= 0.68
+|   |--- RECOVD <= 0.50
+|   |   |--- AGE_YRS <= 0.03
+|   |   |   |--- NUMDAYS <= -0.28
+|   |   |   |   |--- NUMDAYS <= -0.40
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- NUMDAYS >  -0.40
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |--- NUMDAYS >  -0.28
+|   |   |   |   |--- OFC_VISIT <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- OFC_VISIT >  0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |--- AGE_YRS >  0.03
+|   |   |   |--- HOSPITAL <= 0.50
+|   |   |   |   |--- NUMDAYS <= -0.40
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- NUMDAYS >  -0.40
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |--- HOSPITAL >  0.50
+|   |   |   |   |--- HOSPDAYS <= 0.08
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- HOSPDAYS >  0.08
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |--- RECOVD >  0.50
+|   |   |--- HOSPDAYS <= 0.71
+|   |   |   |--- NUMDAYS <= 4.04
+|   |   |   |   |--- ER_ED_VISIT <= 0.50
+|   |   |   |   |   |--- class: 0
+|   |   |   |   |--- ER_ED_VISIT >  0.50
+|   |   |   |   |   |--- truncated branch of depth 4
+|   |   |   |--- NUMDAYS >  4.04
+|   |   |   |   |--- HOSPDAYS <= -0.23
+|   |   |   |   |   |--- truncated branch of depth 2
+|   |   |   |   |--- HOSPDAYS >  -0.23
+|   |   |   |   |   |--- class: 0
+|   |   |--- HOSPDAYS >  0.71
+|   |   |   |--- NUMDAYS <= 3.20
+|   |   |   |   |--- NUMDAYS <= -0.14
+|   |   |   |   |   |--- truncated branch of depth 3
+|   |   |   |   |--- NUMDAYS >  -0.14
+|   |   |   |   |   |--- class: 0
+|   |   |   |--- NUMDAYS >  3.20
+|   |   |   |   |--- class: 1
+|--- AGE_YRS >  0.68
+|   |--- RECOVD <= 0.50
+|   |   |--- NUMDAYS <= -0.39
+|   |   |   |--- AGE_YRS <= 1.28
+|   |   |   |   |--- SEX_M <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- SEX_M >  0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |--- AGE_YRS >  1.28
+|   |   |   |   |--- V_ADMINBY_UNK <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- V_ADMINBY_UNK >  0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |--- NUMDAYS >  -0.39
+|   |   |   |--- VAX_ROUTE_OT <= 0.50
+|   |   |   |   |--- SYM_Injection_site_erythema <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- SYM_Injection_site_erythema >  0.50
+|   |   |   |   |   |--- truncated branch of depth 2
+|   |   |   |--- VAX_ROUTE_OT >  0.50
+|   |   |   |   |--- HOSPITAL <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- HOSPITAL >  0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |--- RECOVD >  0.50
+|   |   |--- NUMDAYS <= 2.64
+|   |   |   |--- VAX_SITE_OT <= 0.50
+|   |   |   |   |--- HOSPDAYS <= 5.42
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- HOSPDAYS >  5.42
+|   |   |   |   |   |--- class: 0
+|   |   |   |--- VAX_SITE_OT >  0.50
+|   |   |   |   |--- class: 1
+|   |   |--- NUMDAYS >  2.64
+|   |   |   |--- HOSPITAL <= 0.50
+|   |   |   |   |--- class: 0
+|   |   |   |--- HOSPITAL >  0.50
+|   |   |   |   |--- VAX_DOSE_SERIES_3 <= 0.50
+|   |   |   |   |   |--- truncated branch of depth 6
+|   |   |   |   |--- VAX_DOSE_SERIES_3 >  0.50
+|   |   |   |   |   |--- class: 0

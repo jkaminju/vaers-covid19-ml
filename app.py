@@ -111,6 +111,11 @@ def load_coeff():
     path = "artifacts/model_coefficients.pkl"
     return joblib.load(path) if os.path.exists(path) else {}
 
+@st.cache_data(show_spinner="Loading GridSearch results …")
+def load_gs():
+    path = "artifacts/gridsearch_results.pkl"
+    return joblib.load(path) if os.path.exists(path) else {}
+
 @st.cache_data(show_spinner="Loading original test features …")
 def load_X_test_original() -> pd.DataFrame:
     path = "artifacts/X_test_original.parquet"
@@ -544,6 +549,66 @@ with tab3:
     cms      = load_cm()
     fi       = load_fi()
     coeff    = load_coeff()
+    gs       = load_gs()
+
+    # ── Best Hyperparameters (GridSearchCV) ───────────────────
+    if gs:
+        st.subheader("Best Hyperparameters — GridSearchCV")
+        st.markdown(
+            "CART and LightGBM used **5-fold** stratified CV; "
+            "Random Forest used **3-fold** (large dataset). "
+            "All grids scored on **F1** (positive class)."
+        )
+
+        # Summary table
+        hp_rows = []
+        for name, r in gs.items():
+            row = {"Model": pretty(name), "CV Folds": r["n_splits"],
+                   "Best CV F1": f"{r['best_cv_score']:.4f}"}
+            row.update({k: str(v) for k, v in r["best_params"].items()})
+            hp_rows.append(row)
+        st.dataframe(pd.DataFrame(hp_rows), use_container_width=True, hide_index=True)
+
+        # CART grid heatmap
+        if "cart" in gs:
+            st.markdown("**CART — Grid F1 Heatmap (max\\_depth × min\\_samples\\_leaf)**")
+            cart_df = gs["cart"]["cv_results_df"].copy()
+            cart_df["max_depth"]        = cart_df["max_depth"].astype(int)
+            cart_df["min_samples_leaf"] = cart_df["min_samples_leaf"].astype(int)
+            pivot = cart_df.pivot(
+                index="max_depth", columns="min_samples_leaf", values="mean_f1"
+            )
+            fig_ht, ax_ht = plt.subplots(figsize=(6, 3.5))
+            sns.heatmap(
+                pivot, annot=True, fmt=".3f", cmap="YlGn", ax=ax_ht,
+                linewidths=0.4, annot_kws={"size": 9},
+            )
+            ax_ht.set_title("CART CV F1 — max_depth vs min_samples_leaf")
+            ax_ht.set_xlabel("min_samples_leaf")
+            ax_ht.set_ylabel("max_depth")
+            st.pyplot(fig_ht, use_container_width=False)
+            plt.close(fig_ht)
+
+        # LightGBM top-5 combos
+        if "lightgbm" in gs:
+            st.markdown("**LightGBM — Top 5 Grid Combinations by CV F1**")
+            lgb_top = (
+                gs["lightgbm"]["cv_results_df"]
+                .sort_values("mean_f1", ascending=False)
+                .head(5)
+                .reset_index(drop=True)
+            )
+            lgb_top["mean_f1"] = lgb_top["mean_f1"].round(4)
+            lgb_top["std_f1"]  = lgb_top["std_f1"].round(4)
+            st.dataframe(lgb_top, use_container_width=True, hide_index=True)
+
+        # CART tree text
+        tree_path = "artifacts/cart_tree_text.txt"
+        if os.path.exists(tree_path):
+            with st.expander("CART — Best Tree Structure (top 4 levels)"):
+                st.code(open(tree_path).read(), language="text")
+
+        st.divider()
 
     # ── CV summary ────────────────────────────────────────────
     st.subheader("5-Fold Cross-Validation (Training Set)")
