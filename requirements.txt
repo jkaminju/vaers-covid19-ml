@@ -9,3 +9,4 @@ plotly
 streamlit>=1.32
 joblib
 pyarrow
+torch

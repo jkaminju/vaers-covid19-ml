@@ -137,6 +137,17 @@ class _MLP(nn.Module):
     def forward(self, x):
         return self.net(x).squeeze(1)
 
+@st.cache_resource(show_spinner=False)
+def _load_sklearn_model(name: str):
+    return joblib.load(f"models/{name}.joblib")
+
+@st.cache_resource(show_spinner="Loading SHAP explainer …")
+def load_shap_explainer():
+    pipe = load_lgb_pipeline()
+    clf  = pipe.named_steps["clf"]
+    prep = pipe.named_steps["prep"]
+    return shap.TreeExplainer(clf), prep
+
 @st.cache_resource(show_spinner="Loading MLP model …")
 def load_mlp():
     cfg_path = "models/mlp_config.pkl"
@@ -852,10 +863,12 @@ with tab3:
 # TAB 4 — SHAP ANALYSIS
 # ═══════════════════════════════════════════════════════════════
 with tab4:
-    st.title("SHAP Analysis (LightGBM)")
+    st.title("SHAP Analysis & Interactive Prediction")
     st.markdown(
         "SHAP (SHapley Additive exPlanations) values measure each feature's "
-        "contribution to individual predictions. Positive = pushes toward **death**."
+        "contribution to individual predictions. Positive = pushes toward **death**.  \n"
+        "Use **Section B** below to enter custom patient values and get a real-time "
+        "prediction from any model, with a SHAP waterfall explanation."
     )
 
     shap_vals, exp_val, feat_names, X_test_arr = load_shap_data()
@@ -966,6 +979,177 @@ with tab4:
             shap.plots.waterfall(exp2, show=False, max_display=15)
             st.pyplot(fig_fb)
             plt.close(fig_fb)
+
+    # ── B — Interactive Prediction ────────────────────────────
+    st.divider()
+    st.subheader("B — Interactive Prediction")
+    st.markdown(
+        "Adjust the sliders and dropdowns to describe a hypothetical patient. "
+        "All other features are held at their training-set median/mode. "
+        "The selected model predicts mortality probability in real time; "
+        "LightGBM always provides the SHAP waterfall explanation."
+    )
+
+    # ── Model selector ─────────────────────────────────────────
+    pred_model_name = st.selectbox(
+        "Model for prediction",
+        list(MODEL_LABELS.keys()),
+        format_func=pretty,
+        key="ipredict_model",
+    )
+
+    # ── Feature inputs ─────────────────────────────────────────
+    df_ref  = load_sample()
+    X_orig_ = load_X_test_original()
+
+    col_i1, col_i2, col_i3 = st.columns(3)
+
+    with col_i1:
+        st.markdown("**Demographics & Timing**")
+        inp_age      = st.slider("Age (years)",                0, 110, 65,  key="ip_age")
+        inp_numdays  = st.slider("Onset-to-Report Lag (days)", 0, 180, 7,   key="ip_numdays")
+        inp_hospdays = st.slider("Hospital Stay (days)",       0, 120, 0,   key="ip_hospdays")
+
+    with col_i2:
+        st.markdown("**Clinical Flags**")
+        inp_hospital = int(st.checkbox("Hospitalised",     value=True,  key="ip_hosp"))
+        inp_lthreat  = int(st.checkbox("Life-Threatening", value=False, key="ip_lthreat"))
+        inp_er       = int(st.checkbox("ER/ED Visit",      value=False, key="ip_er"))
+        inp_disable  = int(st.checkbox("Disability",       value=False, key="ip_disable"))
+        inp_recovd   = int(st.checkbox("Recovered",        value=False, key="ip_recovd"))
+
+    with col_i3:
+        st.markdown("**Vaccine Details**")
+        sex_opts  = ["M", "F", "U"]
+        inp_sex   = st.selectbox("Sex", sex_opts, key="ip_sex")
+        manu_opts = sorted(df_ref["VAX_MANU"].dropna().unique().tolist())
+        inp_manu  = st.selectbox("Vaccine Manufacturer", manu_opts, key="ip_manu")
+        dose_raw  = df_ref["VAX_DOSE_SERIES"].dropna().unique().tolist()
+        dose_opts = sorted([str(d) for d in dose_raw if str(d) not in ("nan", "None")])
+        inp_dose  = st.selectbox("Dose Series", dose_opts, key="ip_dose")
+
+    # ── Build full feature row from defaults + user inputs ─────
+    def _build_input_row(X_ref: pd.DataFrame, overrides: dict) -> pd.DataFrame:
+        row = {}
+        for col in X_ref.columns:
+            if pd.api.types.is_numeric_dtype(X_ref[col]):
+                row[col] = float(X_ref[col].median())
+            else:
+                mode_val = X_ref[col].mode()
+                row[col] = mode_val.iloc[0] if len(mode_val) > 0 else "Unknown"
+        row.update(overrides)
+        return pd.DataFrame([row])
+
+    user_inputs = {
+        "AGE_YRS":         inp_age,
+        "NUMDAYS":         inp_numdays,
+        "HOSPDAYS":        inp_hospdays,
+        "HOSPITAL":        inp_hospital,
+        "L_THREAT":        inp_lthreat,
+        "ER_ED_VISIT":     inp_er,
+        "DISABLE":         inp_disable,
+        "RECOVD":          inp_recovd,
+        "SEX":             inp_sex,
+        "VAX_MANU":        inp_manu,
+        "VAX_DOSE_SERIES": inp_dose,
+    }
+
+    if not X_orig_.empty:
+        X_custom = _build_input_row(X_orig_, user_inputs)
+    else:
+        st.warning("X_test_original.parquet not found — re-run train.py.")
+        X_custom = None
+
+    if X_custom is not None:
+        col_pred, col_wf = st.columns([1, 2])
+
+        # ── Prediction ─────────────────────────────────────────
+        with col_pred:
+            st.markdown("**Prediction**")
+            try:
+                if pred_model_name == "mlp":
+                    mlp_m = load_mlp()
+                    if mlp_m is not None:
+                        _prep  = load_lgb_pipeline().named_steps["prep"]
+                        X_arr  = _prep.transform(X_custom).astype(np.float32)
+                        with torch.no_grad():
+                            prob = float(mlp_m(torch.from_numpy(X_arr)).item())
+                        pred = int(prob >= 0.5)
+                    else:
+                        st.error("MLP model unavailable.")
+                        prob, pred = 0.0, 0
+                else:
+                    _pipe = _load_sklearn_model(pred_model_name)
+                    pred  = int(_pipe.predict(X_custom)[0])
+                    prob  = float(_pipe.predict_proba(X_custom)[0, 1])
+
+                outcome_label = "Died" if pred == 1 else "Survived"
+                outcome_color = "#e74c3c" if pred == 1 else "#27ae60"
+                st.markdown(
+                    f"<div style='background:{outcome_color};color:white;padding:12px;"
+                    f"border-radius:8px;text-align:center;font-size:1.1em;font-weight:bold'>"
+                    f"{'HIGH RISK' if pred == 1 else 'LOW RISK'} — {outcome_label}</div>",
+                    unsafe_allow_html=True,
+                )
+                st.metric("Mortality Probability", f"{prob*100:.1f}%")
+                st.progress(min(prob, 1.0))
+                st.caption(
+                    f"Model: {pretty(pred_model_name)}  \n"
+                    f"Predicted class: **{pred}** ({'Died' if pred else 'Survived'})  \n"
+                    f"Probability (death): **{prob:.4f}**"
+                )
+
+                st.markdown("**Key inputs used:**")
+                st.dataframe(
+                    pd.DataFrame([{
+                        "Age": inp_age, "Hosp.Days": inp_hospdays,
+                        "Hospitalised": bool(inp_hospital),
+                        "Life-Threat": bool(inp_lthreat),
+                        "Recovered": bool(inp_recovd),
+                        "Sex": inp_sex, "Manufacturer": inp_manu,
+                    }]),
+                    hide_index=True, use_container_width=True,
+                )
+            except Exception as exc:
+                st.error(f"Prediction error: {exc}")
+
+        # ── SHAP waterfall for custom input ────────────────────
+        with col_wf:
+            st.markdown("**SHAP Explanation (LightGBM)**")
+            try:
+                shap_expl_, prep_lgb_ = load_shap_explainer()
+                X_cust_arr = prep_lgb_.transform(X_custom)
+                sv_raw     = shap_expl_.shap_values(X_cust_arr)
+                ev_raw     = shap_expl_.expected_value
+
+                # Normalise to 1-D array for positive class
+                if isinstance(sv_raw, list):
+                    sv = sv_raw[1][0] if len(sv_raw) == 2 else sv_raw[0][0]
+                    ev = float(ev_raw[1]) if hasattr(ev_raw, "__len__") else float(ev_raw)
+                elif isinstance(sv_raw, np.ndarray) and sv_raw.ndim == 3:
+                    sv = sv_raw[0, :, 1]
+                    ev = float(ev_raw[1]) if hasattr(ev_raw, "__len__") else float(ev_raw)
+                else:
+                    sv = sv_raw[0]
+                    ev = float(ev_raw[1]) if hasattr(ev_raw, "__len__") else float(ev_raw)
+
+                cust_explanation = shap.Explanation(
+                    values=sv,
+                    base_values=ev,
+                    data=X_cust_arr[0],
+                    feature_names=feat_names,
+                )
+                fig_cust_wf = plt.figure(figsize=(8, 5))
+                shap.plots.waterfall(cust_explanation, show=False, max_display=12)
+                st.pyplot(fig_cust_wf, use_container_width=True)
+                plt.close(fig_cust_wf)
+                st.caption(
+                    "Red bars push toward predicting death (positive SHAP); "
+                    "blue bars push toward survival (negative SHAP). "
+                    "f(x) is the model's log-odds output for this input."
+                )
+            except Exception as exc:
+                st.error(f"SHAP error: {exc}")
 
 # ═══════════════════════════════════════════════════════════════
 # TAB 5 — COVID FEATURE EXPLORER
