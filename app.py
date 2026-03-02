@@ -617,7 +617,7 @@ with tab3:
         tree_path = "artifacts/cart_tree_text.txt"
         if os.path.exists(tree_path):
             with st.expander("CART — Best Tree Structure (top 4 levels)"):
-                st.code(open(tree_path).read(), language="text")
+                st.code(open(tree_path, encoding="utf-8", errors="replace").read(), language="text")
 
         st.divider()
 
